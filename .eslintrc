@@ -1,0 +1,12 @@
+{
+  "extends": "airbnb-base",
+  "rules": {
+    "no-underscore-dangle": [
+      "error",
+      {
+        "no-console": "off",
+        "allow": ["_id"]
+      }
+    ]
+  }
+}
