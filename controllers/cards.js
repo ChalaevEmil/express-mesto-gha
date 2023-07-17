@@ -29,7 +29,7 @@ const createCard = (req, res) => {
     owner,
   })
     .then((card) => {
-      card
+      card.populate('owner')
         .then((newCard) => res.status(OK).send(newCard))
         .catch(() =>
           res.status(INTERNAL_SERVER_ERROR).send({
@@ -58,9 +58,13 @@ const removeCard = (req, res) => {
     _id: cardId,
   })
     .then((card) => {
-      if (!card) {
+      if (card) {
+        res.send({
+          message: 'Карточка удалена',
+        });
+      } else {
         res.status(NOT_FOUND).send({
-          message: "Карточка с указанным _id не найдена",
+          message: 'Карточка с указанным _id не найдена',
         });
       }
     })
