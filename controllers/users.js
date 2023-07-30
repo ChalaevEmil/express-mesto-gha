@@ -1,10 +1,13 @@
 const mongoose = require("mongoose");
 const User = require("../models/user");
-const {
-  BAD_REQUEST,
-  NOT_FOUND,
-  INTERNAL_SERVER_ERROR,
-} = require("../utils/errors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const { JWT_SECRET, NODE_ENV } = process.env;
+const OK = require("../error/Ok-status");
+const BadRequestError = require("../error/Bad-request-error");
+const NotFoundError = require("../error/Not-found-error");
+const InternalServerError = require("../error/Internal-server-error");
+const ConflictError = require("../error/Conflict-error");
 
 const getUsers = (req, res) => {
   User.find({})
@@ -14,7 +17,7 @@ const getUsers = (req, res) => {
       })
     )
     .catch(() =>
-      res.status(INTERNAL_SERVER_ERROR).send({
+      res.status(InternalServerError).send({
         message: "Ошибка по умолчанию",
       })
     );
@@ -27,45 +30,49 @@ const getUserById = (req, res) => {
           data: user,
         });
       } else {
-        res.status(NOT_FOUND).send({
+        res.status(NotFoundError).send({
           message: "Пользователь по указанному _id не найден",
         });
       }
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
-        res.status(BAD_REQUEST).send({
+        res.status(BadRequestError).send({
           message: "Переданы некорректные данные пользователя",
         });
       } else {
-        res.status(INTERNAL_SERVER_ERROR).send({
+        res.status(InternalServerError).send({
           message: "Ошибка по умолчанию",
         });
       }
     });
 };
 
-const createNewUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  User.create({
-    name,
-    about,
-    avatar,
-  })
-    .then((user) =>
-      res.send({
-        data: user,
+const createNewUser = (req, res, next) => {
+  const { name, about, avatar, email, password } = req.body;
+  bcrypt
+    .hash(password, 10)
+    .then((hash) =>
+      User.create({
+        name,
+        about,
+        avatar,
+        email,
+        password: hash,
       })
     )
+    .then((user) => {
+      const dataUser = user.toObject();
+      delete dataUser.password;
+      res.status(OK).send(dataUser);
+    })
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        res.status(BAD_REQUEST).send({
-          message: "Переданы некорректные данные при создании пользователя",
-        });
+        next(new BadRequestError("Переданы некорректные данные"));
+      } else if (err.code === 11000) {
+        next(new ConflictError("Данный email уже зарегистрирован"));
       } else {
-        res.status(INTERNAL_SERVER_ERROR).send({
-          message: "Ошибка по умолчанию",
-        });
+        next(err);
       }
     });
 };
@@ -81,18 +88,18 @@ const userUpdate = (req, res, updateData) => {
           data: user,
         });
       } else {
-        res.status(NOT_FOUND).send({
+        res.status(NotFoundError).send({
           message: "Пользователь не найден",
         });
       }
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        res.status(BAD_REQUEST).send({
+        res.status(BadRequestError).send({
           message: "Переданы некорректные данные пользователя.",
         });
       } else {
-        res.status(INTERNAL_SERVER_ERROR).send({
+        res.status(InternalServerError).send({
           message: "Ошибка по умолчанию",
         });
       }
@@ -109,10 +116,45 @@ const updateUserAvatar = (req, res) => {
   userUpdate(req, res, { avatar });
 };
 
+const login = (req, res, next) => {
+  const { email, password } = req.body;
+  User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign(
+        { _id: user._id },
+        NODE_ENV === "production" ? JWT_SECRET : "dev-secret",
+        { expiresIn: "7d" }
+      );
+      res.cookie("jwt", token);
+      res.status(OK).send({ message: "Успешный вход" });
+    })
+    .catch(next);
+};
+
+const getUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => {
+      if (user) {
+        res.send({ data: user });
+      } else {
+        next(new NotFoundError("Пользователь по указанному id не найден"));
+      }
+    })
+    .catch((err) => {
+      if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError("Переданы некорректные данные"));
+      } else {
+        next(err);
+      }
+    });
+};
+
 module.exports = {
   getUsers,
   getUserById,
   createNewUser,
   updateUserData,
   updateUserAvatar,
+  login,
+  getUser,
 };
