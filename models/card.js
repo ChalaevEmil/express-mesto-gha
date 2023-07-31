@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { URL } = require("../utils/utils");
+const URL = require("../utils/utils");
 
 const cardSchema = new mongoose.Schema({
   name: {
@@ -8,13 +8,14 @@ const cardSchema = new mongoose.Schema({
     minlength: 2,
     maxlength: 30,
   },
+
   link: {
     type: String,
+    required: true,
     validate: {
       validator: (v) => URL.test(v),
       message: "Неправильный формат ссылки",
     },
-    required: true,
   },
   owner: {
     type: mongoose.ObjectId,

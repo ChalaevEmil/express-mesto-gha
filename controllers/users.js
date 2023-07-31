@@ -1,13 +1,11 @@
 const mongoose = require("mongoose");
 const User = require("../models/user");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { JWT_SECRET, NODE_ENV } = process.env;
 const OK = require("../error/Ok-status");
 const BadRequestError = require("../error/Bad-request-error");
 const NotFoundError = require("../error/Not-found-error");
 const InternalServerError = require("../error/Internal-server-error");
 const ConflictError = require("../error/Conflict-error");
+const jwt = require("jsonwebtoken");
 
 const getUsers = (req, res) => {
   User.find({})
@@ -48,6 +46,12 @@ const getUserById = (req, res) => {
     });
 };
 
+const getUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => res.send({ data: user }))
+    .catch(next);
+};
+
 const createNewUser = (req, res, next) => {
   const { name, about, avatar, email, password } = req.body;
   bcrypt
@@ -61,16 +65,16 @@ const createNewUser = (req, res, next) => {
         password: hash,
       })
     )
-    .then((user) => {
-      const dataUser = user.toObject();
-      delete dataUser.password;
-      res.status(OK).send(dataUser);
-    })
+    .then((user) => res.status(201).send({ data: user }))
     .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        next(new BadRequestError("Переданы некорректные данные"));
-      } else if (err.code === 11000) {
-        next(new ConflictError("Данный email уже зарегистрирован"));
+      if (err.code === 11000) {
+        next(new ConflictError("Пользователь с таким email уже существует"));
+      } else if (err.name === "ValidationError") {
+        next(
+          new BadRequestError(
+            "Переданы некорректные данные при создании пользователя"
+          )
+        );
       } else {
         next(err);
       }
@@ -125,28 +129,12 @@ const login = (req, res, next) => {
         NODE_ENV === "production" ? JWT_SECRET : "dev-secret",
         { expiresIn: "7d" }
       );
-      res.cookie("jwt", token);
-      res.status(OK).send({ message: "Успешный вход" });
+      res.cookie("jwt", token, {
+        httpOnly: true,
+      });
+      res.status(OK).send({ token });
     })
     .catch(next);
-};
-
-const getUser = (req, res, next) => {
-  User.findById(req.user._id)
-    .then((user) => {
-      if (user) {
-        res.send({ data: user });
-      } else {
-        next(new NotFoundError("Пользователь по указанному id не найден"));
-      }
-    })
-    .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        next(new BadRequestError("Переданы некорректные данные"));
-      } else {
-        next(err);
-      }
-    });
 };
 
 module.exports = {

@@ -1,53 +1,85 @@
-const mongoose = require("mongoose");
 const Card = require("../models/card");
 const OK = require("../error/Ok-status");
-const InternalServerError = require("../error/Internal-server-error");
-const NotFoundError = require("../error/Not-found-error");
 const BadRequestError = require("../error/Bad-request-error");
+const NotFoundError = require("../error/Not-found-error");
+const InternalServerError = require("../error/Internal-server-error");
 const ForbiddenError = require("../error/Forbidden-error");
 
-const getCards = (req, res, next) => {
+const getCards = (req, res) => {
   Card.find({})
-    .then((cards) => res.send({ data: cards }))
-    .catch(next);
+    .then((cards) =>
+      res.send({
+        data: cards,
+      })
+    )
+    .catch(() =>
+      res.status(InternalServerError).send({
+        message: "Ошибка по умолчанию",
+      })
+    );
 };
 
 const createCard = (req, res) => {
   const { name, link } = req.body;
   const owner = req.user._id;
-  Card.create({ name, link, owner })
-    .then((newCard) => res.status(OK).send(newCard))
-    .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        next(
-          new BadDataError("Переданы некорректные данные при создании карточки")
+  Card.create({
+    name,
+    link,
+    owner,
+  })
+    .then((card) => {
+      card
+        .populate("owner")
+        .then((newCard) => res.status(OK).send(newCard))
+        .catch(() =>
+          res.status(InternalServerError).send({
+            message: "Ошибка по умолчанию",
+          })
         );
+    })
+    .catch((err) => {
+      if (err.name === "ValidationError") {
+        res.status(BadRequestError).send({
+          message: "Переданы некорректные данные при создании карточки",
+        });
       } else {
-        next(err);
+        res.status(InternalServerError).send({
+          message: "Ошибка по умолчанию",
+        });
       }
     });
 };
 
-const removeCard = (req, res, next) => {
+const removeCard = (req, res) => {
   const owner = req.user._id;
   const { cardId } = req.params;
-  Card.findById(cardId)
+  Card.findByIdAndRemove({
+    owner,
+    _id: cardId,
+  })
     .then((card) => {
-      if (!card) {
-        next(new NotFoundError("Карточка с указанным _id не найдена"));
+      if (card) {
+        res.send({
+          message: "Карточка удалена",
+        });
       }
-      if (String(card.owner) !== owner) {
-        next(new ForbiddenError("Вы не можете удалить чужую карточку"));
+      if (cardId.owner.toString() !== req.user._id) {
+        throw new ForbiddenError("Вы не можете удалить эту карточку");
+      } else {
+        res.status(NotFoundError).send({
+          message: "Карточка с указанным _id не найдена",
+        });
       }
-      return Card.findByIdAndRemove(cardId)
-        .then((card) => res.status(OK).send({ data: card }))
-        .catch(next);
     })
     .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        next(new BadRequestError("Переданы некорректные данные."));
+      if (err.name === "CastError") {
+        res.status(BadRequestError).send({
+          message: "Переданы некорректные данные",
+        });
       } else {
-        next(err);
+        res.status(InternalServerError).send({
+          message: "Ошибка по умолчанию",
+        });
       }
     });
 };
