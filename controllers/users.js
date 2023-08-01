@@ -15,11 +15,7 @@ const getUsers = (req, res) => {
         data: users,
       })
     )
-    .catch(() =>
-      res.status(InternalServerError).send({
-        message: "Ошибка по умолчанию",
-      })
-    );
+    .catch(() => next(new InternalServerError("Ошибка по умолчанию")));
 };
 const getUserById = (req, res) => {
   User.findById(req.params.userId)
@@ -49,37 +45,60 @@ const getUserById = (req, res) => {
 
 const getUser = (req, res, next) => {
   User.findById(req.user._id)
-    .then((user) => res.send({ data: user }))
-    .catch(next);
+    .then((user) => {
+      if (user) {
+        res.send({ data: user });
+      } else {
+        next(new NotFoundError("Пользователь не найден"));
+      }
+    })
+    .catch((err) => {
+      if (err.name === "CastError") {
+        next(new BadRequestError("Переданы некорректные данные"));
+      } else {
+        next(new InternalServerError("Произошла ошибка"));
+      }
+    });
 };
 
 const createNewUser = (req, res, next) => {
   const { name, about, avatar, email, password } = req.body;
-  bcrypt
-    .hash(password, 10)
-    .then((hash) =>
-      User.create({
-        name,
-        about,
-        avatar,
-        email,
-        password: hash,
-      })
-    )
-    .then((user) => res.status(201).send({ data: user }))
-    .catch((err) => {
-      if (err.code === 11000) {
-        next(new ConflictError("Пользователь с таким email уже существует"));
-      } else if (err.name === "ValidationError") {
-        next(
-          new BadRequestError(
-            "Переданы некорректные данные при создании пользователя"
-          )
-        );
-      } else {
-        next(err);
-      }
-    });
+  bcrypt.hash(password, 10, (error, hash) => {
+    if (error) {
+      next(new InternalServerError("Произошла ошибка"));
+      return;
+    }
+    User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    })
+      .then((user) =>
+        res.status(201).send({
+          data: {
+            name: user.name,
+            about: user.about,
+            email: user.email,
+            avatar: user.avatar,
+          },
+        })
+      )
+      .catch((err) => {
+        if (err.name === "ValidationError") {
+          next(
+            new BadRequestError(
+              "Переданы некорректные данные при создании пользователя"
+            )
+          );
+        } else if (err.code === 11000) {
+          next(new ConflictError("Пользователь с таким email уже существует"));
+        } else {
+          next(err);
+        }
+      });
+  });
 };
 
 const userUpdate = (req, res, updateData) => {

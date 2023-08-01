@@ -6,6 +6,7 @@ const bodyParser = require("body-parser");
 const auth = require("./middlewares/auth");
 const handleError = require("./middlewares/handleError");
 const {errors} = require('celebrate')
+const { login, createNewUser } = require("./controllers/users");
 const {
   createNewUserValidation,
   loginValidation,
@@ -15,7 +16,7 @@ const cookieParser = require("cookie-parser");
 const userRouter = require("./routes/users");
 const cardRouter = require("./routes/cards");
 
-const { login, createNewUser } = require("./controllers/users");
+
 
 const app = express();
 

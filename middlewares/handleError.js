@@ -3,7 +3,7 @@ const handleError = (err, req, res, next) => {
   res.status(statusCode).send({
     message: statusCode === 500 ? "Произошла ошибка" : message,
   });
-  next();
+  return next();
 };
 
 module.exports = handleError;
