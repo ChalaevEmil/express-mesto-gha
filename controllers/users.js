@@ -45,20 +45,11 @@ const getUserById = (req, res) => {
 };
 
 const getUser = (req, res, next) => {
-  const { userId } = req.params;
-  User.findById(userId)
+  User.findById(req.user._id)
     .then((user) => {
-      if (!user) {
-        return next(new NotFoundError('Пользователь не найден'));
-      }
       res.status(200).send(user);
     })
-    .catch((error) => {
-      if (error instanceof mongoose.Error.CastError) {
-        return next(new BadRequestError('Переданы некорректные данные'));
-      }
-      return next(new InternalServerError('Произошла ошибка'));
-    });
+    .catch(next);
 };
 
 const createNewUser = (req, res, next) => {
