@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 
@@ -19,29 +19,13 @@ const getUsers = (req, res) => {
     .catch(() => next(new InternalServerError("Ошибка по умолчанию")));
 };
 const getUserById = (req, res) => {
-  User.findById(req.params.userId)
-    .then((user) => {
-      if (user) {
-        res.send({
-          data: user,
-        });
-      } else {
-        res.status(NotFoundError).send({
-          message: "Пользователь по указанному _id не найден",
-        });
-      }
+  const { userId } = req.params;
+  User.findById(userId)
+    .orFail(() => {
+      throw new NotFoundError("Пользователь не найден");
     })
-    .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        res.status(BadRequestError).send({
-          message: "Переданы некорректные данные пользователя",
-        });
-      } else {
-        res.status(InternalServerError).send({
-          message: "Ошибка по умолчанию",
-        });
-      }
-    });
+    .then((user) => res.send(user))
+    .catch(next);
 };
 
 const getUser = (req, res, next) => {
