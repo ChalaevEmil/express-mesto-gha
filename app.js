@@ -22,8 +22,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.use(auth, userRouter);
-app.use(auth, cardRouter);
+app.use('/users', auth, userRouter);
+app.use('/cards', auth, cardRouter);
 app.post("/signin", loginValidation, login);
 app.post("/signup", createNewUserValidation, createNewUser);
 
