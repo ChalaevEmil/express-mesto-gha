@@ -5,7 +5,7 @@ const {
   removeCard,
   likedCard,
   dislikedCard,
-} = require("../controllers");
+} = require("../controllers/cards");
 const {
   createCardValidation,
   cardIdValidation,

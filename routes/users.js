@@ -5,7 +5,7 @@ const {
   updateUserData,
   updateUserAvatar,
   getUser,
-} = require("../controllers");
+} = require("../controllers/users");
 const {
   getUserByIdValidation,
   updateUserDataValidation,
