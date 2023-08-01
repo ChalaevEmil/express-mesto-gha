@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 const bcrypt = require('bcryptjs');
 const User = require("../models/user");
-const OK = require("../error/Ok-status");
+const jwt = require("jsonwebtoken");
+
 const BadRequestError = require("../error/Bad-request-error");
 const NotFoundError = require("../error/Not-found-error");
 const InternalServerError = require("../error/Internal-server-error");
 const ConflictError = require("../error/Conflict-error");
-const jwt = require("jsonwebtoken");
 const UnauthorizedError = require("../error/Unauthorized-error");
 
 const getUsers = (req, res) => {
@@ -45,20 +45,19 @@ const getUserById = (req, res) => {
 };
 
 const getUser = (req, res, next) => {
-  User.findById(req.user._id)
+  const { userId } = req.params;
+  User.findById(userId)
     .then((user) => {
-      if (user) {
-        res.send({ data: user });
-      } else {
-        next(new NotFoundError("Пользователь не найден"));
+      if (!user) {
+        return next(new NotFoundError('Пользователь не найден'));
       }
+      res.status(200).send(user);
     })
-    .catch((err) => {
-      if (err.name === "CastError") {
-        next(new BadRequestError("Переданы некорректные данные"));
-      } else {
-        next(new InternalServerError("Произошла ошибка"));
+    .catch((error) => {
+      if (error instanceof mongoose.Error.CastError) {
+        return next(new BadRequestError('Переданы некорректные данные'));
       }
+      return next(new InternalServerError('Произошла ошибка'));
     });
 };
 
