@@ -18,14 +18,25 @@ const getUsers = (req, res) => {
     )
     .catch(() => next(new InternalServerError("Ошибка по умолчанию")));
 };
+
 const getUserById = (req, res) => {
-  const { userId } = req.params;
-  User.findById(userId)
-    .orFail(() => {
-      throw new NotFoundError("Пользователь не найден");
+  User.findById(req.params.userId)
+    .then((user) => {
+      if (user) {
+        res.send({
+          data: user,
+        });
+      } else {
+        next(new NotFoundError("Пользователь по указанному _id не найден"));
+      }
     })
-    .then((user) => res.send(user))
-    .catch(next);
+    .catch((err) => {
+      if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError("Переданы некорректные данные пользователя"));
+      } else {
+        next(new InternalServerError("Ошибка по умолчанию"));
+      }
+    });
 };
 
 const getUser = (req, res, next) => {
