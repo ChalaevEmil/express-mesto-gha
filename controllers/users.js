@@ -9,14 +9,10 @@ const InternalServerError = require("../error/Internal-server-error");
 const ConflictError = require("../error/Conflict-error");
 const UnauthorizedError = require("../error/Unauthorized-error");
 
-const getUsers = (req, res) => {
+const getUsers = (req, res, next) => {
   User.find({})
-    .then((users) =>
-      res.send({
-        data: users,
-      })
-    )
-    .catch(() => next(new InternalServerError("Ошибка по умолчанию")));
+  .then((users) => res.send({ data: users }))
+  .catch(next);
 };
 
 const getUserById = (req, res) => {
