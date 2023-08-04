@@ -68,16 +68,16 @@ const likedCard = (req, res, next) => {
       }
       return res.status(200).send(card);
     })
-    .catch((error) => {
-      if (error.name === "CastError") {
+    .catch((err) => {
+      if (err.name === "CastError") {
         next(
-          new BadRequestError(
-            "Переданы некорректные данные для постановки лайка"
-          )
+          new BadRequestError("Переданы некорректные данные для постановки лайка")
         );
+      } else {
+        next(err);
       }
-      next(error);
-    });
+    })
+    .catch(next);
 };
 
 const dislikedCard = (req, res, next) => {
