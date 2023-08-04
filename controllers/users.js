@@ -30,7 +30,7 @@ const getUserById = (req, res) => {
       if (err instanceof mongoose.Error.CastError) {
         next(new BadRequestError("Переданы некорректные данные пользователя"));
       } else {
-        next(new InternalServerError("Ошибка по умолчанию"));
+        next(err);
       }
     });
 };
@@ -105,9 +105,7 @@ const userUpdate = (req, res, updateData) => {
           message: "Переданы некорректные данные пользователя.",
         });
       } else {
-        res.status(InternalServerError).send({
-          message: "Ошибка по умолчанию",
-        });
+        next(err);
       }
     });
 };
