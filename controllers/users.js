@@ -14,7 +14,7 @@ const getUsers = (req, res, next) => {
     .catch(next);
 };
 
-const getUserById = (req, res) => {
+const getUserById = (req, res, next) => {
   User.findById(req.params.userId)
     .then((user) => {
       if (user) {
@@ -26,7 +26,7 @@ const getUserById = (req, res) => {
       }
     })
     .catch((err) => {
-      if (err.name === "ValidationError") {
+      if (err.name === "CastError") {
         next(new BadRequestError("Переданы некорректные данные пользователя"));
       } else {
         next(err);
