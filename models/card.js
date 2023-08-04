@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const URL = require("../utils/utils");
+const mongoose = require('mongoose');
+const URL = require('../utils/utils');
 
 const cardSchema = new mongoose.Schema({
   name: {
@@ -14,19 +14,19 @@ const cardSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: (v) => URL.test(v),
-      message: "Неправильный формат ссылки",
+      message: 'Неправильный формат ссылки',
     },
   },
   owner: {
     type: mongoose.ObjectId,
     required: true,
-    ref: "user",
+    ref: 'user',
   },
   likes: [
     {
       type: mongoose.Schema.Types.ObjectId,
       default: [],
-      ref: "user",
+      ref: 'user',
     },
   ],
   createdAt: {
@@ -35,4 +35,4 @@ const cardSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("card", cardSchema);
+module.exports = mongoose.model('card', cardSchema);

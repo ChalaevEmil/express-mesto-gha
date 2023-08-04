@@ -1,5 +1,5 @@
-const { Joi, celebrate } = require("celebrate");
-const URL = require("../utils/utils");
+const { Joi, celebrate } = require('celebrate');
+const URL = require('../utils/utils');
 
 const createNewUserValidation = celebrate({
   body: Joi.object().keys({
